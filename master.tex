@@ -1,0 +1,253 @@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% This will help you in writing your homebook
+% Remember that the character % is a comment in latex
+
+% Divide the work you have done in each of the chapters used 
+% during the lab lessons in a new chapter, as in the example below, 
+% using a coherent title 
+
+
+% For each chapter you can include :
+
+%-----------------------------
+% VHDL file, using the sintax:
+
+
+	%\begin{listato}
+	%\lstinputlisting{./exeMPLE/listato1.vhd}
+	%\end{listato}
+
+% the path to the file must be correct, obviously
+% Should you have listings written in other languages the method is the 
+% same, but the language set up must be changed using a different 
+% setting for the command \lstset{language=VHDL} in file homebook.tex 
+
+
+%-----------------------------
+% figures in postcript (ps) or encapsulated postcript (eps)
+% format, using the syntax:
+
+%	\begin{figure}[h]
+%	\centering
+%	\includegraphics[width=9cm]{./cap1/figure1.eps}
+%	\caption{Put a caption if you want (didascalia...:)))}
+%	\label{put-a-label-for-referring-to-this-picture}	
+%	\end{figure}
+
+% the path to the file must be correct, obviously
+% you can refer to this picture in any point of your document
+% by typing the instruction:
+
+% 	\ref{put-a-label-for-referring-to-this-picture}
+
+% that is using the same label you put in the fiure label
+% when you will run the "latex command" an automatic reference to
+% this figure with the correct enumeration will be inserted
+
+
+%-----------------------
+% comment in text format (if you are not skilled in latex and don't want to be)
+% using the sintax:
+
+	%\begin{verbatim}
+	% blablabla 
+	%\end{verbatim}
+
+% The verbatimg includes text as it is, as you could write in a normal text file 
+
+% (BETTER) If uou want to write enhancing all the latex possibilities you 
+% should add to you text a few commands in some particular cases. 
+% In the following you have and example of a few chapters roughtly commented
+% and written all in this file: remember that you can saparate
+% each chapter in different files (this is always what a latex pro does) 
+% and include them using the instruction: \input{./directoryxx/fileyy.tex}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Beginning of latex commands
+% You can copy this in a new file (e.g. cap1/cap1.tex) and include it here
+% using the command : \input{./cap1/cap1.tex}
+
+
+\chapter[Overview and Features]{Overview and Features}
+Our DLX processor is a 5-stage pipelined in-order microprocessor which fully supports
+general integer instructions and some long latency special integer instructions,
+like signed and unsigned multiplication and division and unsigned square root.
+
+With maximum forwarding technology, the processor only suffers 1 type of logic hazard; 
+Read After Load (RAL).
+
+In order to eliminate or reduce the delay caused by branching, the Branch unit is organized
+in the 2nd stage (ID), which allows it to make the decision as soon as possible.
+Furthermore, a 2-bit-saturating-counter-based Branch Prediction unit is embedded in the Branch unit and is used to
+predict the result of branch in case of a Branch After Load (BAL) stall.
+
+\chapter[Structure]{Structure}
+The whole DLX microprocessor is organized in 4 parts; Control unit, Datapath,
+the instruction RAM and the data RAM. As shown in figure \ref{fig:Dlx}
+
+\section[Control Unit]{Control Unit}
+Control Unit mainly produces the control words to control the behavior of our microprocessor's Datapath.
+It also needs to decide how a stall signal affects the pipeline and whether a branch
+is taken or not.
+
+Our microprocessor's Control Unit consists of a Control word generator, a Stall generator and a Branch unit.
+As shown in figure \ref{fig:ControlUnit}
+
+\subsection[Control Word Generator]{Control Word Generator}
+The Control word generator (CwGenerator) is a tiny-micro-processor-based module with 2 memory levels;
+a relocated memory and a microcode memory.
+
+It first looks up a signal called {\it upc2} corresponding to the current instruction in the {\it stage 2 (ID)} and then gets the control
+words from the microcode memory based on this {\it upc2} signal. The {\it upc2} can be delayed with offset in each clock cycle,
+which makes it {\it upc3}, {\it upc4} and {\it upc5}.
+
+For R-type and F-type instructions, all the control words are the same
+except for the part controlling the execution units (ALU, MUL, DIV).
+So a single control word that consists of many bits is introduced to solve this sharing problem among R-type
+and F-type instructions.
+
+At the end of process, depending on {\it branch flag} and {\it stall flag}, the control words will be masked in
+a specific way to form the final control words.
+
+The structure of Control word generator is shown in figure \ref{fig:CwGenerator}
+
+\subsection[Stall Generator]{Stall Generator}
+The Stall Generator deals with different signals which will lead to stall any stage
+of the pipeline. The signals include:
+
+\begin{description}
+  \item[RAL] Read After Load, 3rd stage (EXE).
+  \item[BPW] Branch Predict Wrong, 3rd stage (EXE).
+  \item[JRAL] JR After Load, 2nd stage (ID).
+  \item[MUL] Multiplication, 3rd stage (EXE).
+  \item[DIV] Division, 3rd stage (EXE).
+  \item[SQRT] Square Root, 3rd stage (EXE).
+\end{description}
+
+The detail of hazard handling will be covered in Section \ref{ch:hazard}.
+
+For each kind of hazard, we use a F.S.M. and a logic block to determine the behavior of
+Datapath, the former is for following clock cycles and the latter is for the current clock
+cycle. Finally, the {\it stall\_flag} signal is produced by performing OR operation between
+the resulting signals obtained from these blocks.
+
+The structure of Stall generator is shown in figure \ref{fig:StallGenerator}
+
+\subsection[Branch]{Branch}
+The Branch Unit calculates the result of branch instructions by checking the value
+of the involving register. It will make predictions when the value of this register
+is not ready.
+
+The detail of Branch After Load (BAL) hazard will be covered in section \ref{ch:hazard}. And the
+detail of Branch Prediction will be covered in section \ref{ch:bpu}
+
+The structure of Stall generator is shown in figure \ref{fig:StallGenerator}
+
+\section[Datapath]{Datapath}
+The Datapath contains the basic 5 stages and one additional stage (EXTRA); it connects to Instruction RAM
+in stage 1 and 2; data RAM in stage 4.
+
+\subsection[IF (Stage 1)]{IF (Stage 1)}
+Instruction Fetch sends PC to Instruction RAM and calculates NPC. As shown in figure \ref{fig:if}.
+
+\subsection[ID (Stage 2)]{ID (Stage 2)}
+Instruction Decode receives an instruction from Instruction RAM and depending on its type, the processor in this stage
+reads operands from Register File, extends the immediate value and calculates the PC for the next instruction.
+
+The Register File works at the falling edge of the clock signal. It has 2 read ports and 1 write port. There are 32 4-byte integer registers
+inside the data area.
+
+The Extend Unit works in both signed and unsigned modes.
+
+The address which is not selected by the branch prediction unit is kept and delayed in case of a wrong prediction occurs,
+if so, this address could be restored.
+
+The structure is shown in figure \ref{fig:id}
+
+\subsection[EXE (Stage 3)]{EXE (Stage 3)}
+Execution stage receives operands and control words to perform different types of operations. For the ALU, all the operations
+are completed within 1 clock cycle. For MUL and DIV, the operations will take more than 1 clock cycle to be completed. The long
+latency operations will be covered in section \ref{ch:lli}
+
+\subsection[MEM (Stage 4)]{MEM (Stage 4)}
+Memory stage receives the resulting signals from the operations performed in the previous stage and based on the given instruction
+the it will either store the resulting value in Data RAM or bring a value needed from Data RAM.
+
+\subsection[WB (Stage 5)]{WB (Stage 5)}
+WriteBack stage takes the final value given by the Memory stage and send it to the Register File (RF). An important point here is
+that the address in which this value is going to be set has been forwarded from stage 2 (ID).
+
+\subsection[EXTRA (Stage 6)]{EXTRA (Stage 6)}
+Extra stage will basically take the same output of stage 5 and send it back to the memory stage in orded to handle hazards. this will be explained in details in the section… 
+
+
+\section[RAM]{RAM}
+\subsection[IRAM]{IRAM}
+\subsection[DRAM]{DRAM}
+
+\section[Hazard Handling]{Hazard Handling}
+\label{ch:hazard}
+\subsection[Forwarding]{Forwarding}
+\subsection[Read After Load (RAL)]{Read After Load (RAL)}
+\subsection[Branch After Load (BAL)]{Branch After Load (BAL)}
+\subsection[JR After Load (JRAL)]{JR After Load (JRAL)}
+\subsection[Store After After Write (SAAW)]{Store After After Write (SAAW)}
+\subsection[Long Latency Execution]{Long Latency Execution}
+
+\section[Branch Prediction]{Branch Prediction}
+\label{ch:bpu}
+The information for each branch prediction is stored inside a branch history table (BHT).
+
+The BHT is organized like a direct-mapped cache. Each entry contains 2 fields:
+TAG and VALUE. TAG is determined by the first part of branch address (Default 25 bits) and VALUE
+is the current 2-bit state of the branch instruction. The index of each entry is
+determined by the middle part of address (Default 5 bits).
+
+The branch prediction can be divided into 2 phases: prediction phase and verification phase.
+
+During the prediction phase (ID stage), it look up the BHT by index, compare the TAG and get the VALUE.
+Based on VALUE, it predict whether the branch will take or not. If the TAG doesn't match,
+the entry will be replaced with the new TAG with VALUE="00".
+
+During the verification phase (EXE stage), it check whether the previous prediction
+is correct or not. and update the VALUE area according the rule shown in figure \ref{fig:bpu}
+
+\section[Long Latency Instructions]{Long Latency Instructions}
+\label{ch:lli}
+\subsection[Multiplication]{Multiplication}
+Signed multiplication is realized by booth's algorithm.
+
+\subsection[Division]{Division}
+\subsection[Square Root]{Square Root}
+
+\chapter[Instruction List]{Instruction List}
+\begin{table}[]
+\centering
+\caption{My caption}
+\label{my-label}
+\begin{tabular}{|l|l|l|l|}
+\hline
+Type & Instruction & Opcd                   & Func \\ \hline
+R    & SSL         & \multirow{14}{*}{0x00} & 0x04 \\ \cline{1-2} \cline{4-4} 
+     & SRL         &                        & 0x06 \\ \cline{1-2} \cline{4-4} 
+     & SRA         &                        & 0x07 \\ \cline{1-2} \cline{4-4} 
+     & ADD         &                        & 0x20 \\ \cline{1-2} \cline{4-4} 
+     & ADDU        &                        & 0x21 \\ \cline{1-2} \cline{4-4} 
+     & SUB         &                        & 0x22 \\ \cline{1-2} \cline{4-4} 
+     & SUBU        &                        & 0x23 \\ \cline{1-2} \cline{4-4} 
+     & AND         &                        & 0x24 \\ \cline{1-2} \cline{4-4} 
+     & OR          &                        & 0x25 \\ \cline{1-2} \cline{4-4} 
+     & XOR         &                        & 0x26 \\ \cline{1-2} \cline{4-4} 
+     & SEQ         &                        & 0x28 \\ \cline{1-2} \cline{4-4} 
+     & SNE         &                        & 0x29 \\ \cline{1-2} \cline{4-4} 
+     & SLT         &                        & 0x2a \\ \cline{1-2} \cline{4-4} 
+     & SGT         &                        & 0x2b \\ \hline
+\end{tabular}
+\end{table}
+
+\chapter[Testing]{Testing}
+
